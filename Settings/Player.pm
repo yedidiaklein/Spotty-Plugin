@@ -23,7 +23,7 @@ sub page {
 
 sub prefs {
 	my ($class, $client) = @_;
-	my @prefs = qw(replaygain filterExplicitContent reversePodcastOrder enableConnect connectName);
+	my @prefs = qw(replaygain filterExplicitContent reversePodcastOrder);
 	return ($prefs->client($client), @prefs);
 }
 

@@ -1193,21 +1193,3 @@ PLUGIN_SPOTTY_PLAYLIST_TRACKS
 	HU	Lejátszási lista zeneszámok
 	NL	Afspeellijst Nummers
 
-PLUGIN_SPOTTY_ENABLE_CONNECT
-	EN	Enable Spotify Connect
-
-PLUGIN_SPOTTY_ENABLE_CONNECT_DESC
-	EN	Enable this to make your Squeezebox appear as a Spotify Connect speaker in your Spotify mobile app. When enabled, you can control playback directly from the Spotify app on your phone or computer.
-
-PLUGIN_SPOTTY_ENABLE_CONNECT_PLAYER
-	EN	Enable Spotify Connect for this player
-
-PLUGIN_SPOTTY_ENABLE_CONNECT_PLAYER_DESC
-	EN	Enable Spotify Connect for this specific player. The global Spotify Connect setting must also be enabled.
-
-PLUGIN_SPOTTY_CONNECT_NAME
-	EN	Spotify Connect device name
-
-PLUGIN_SPOTTY_CONNECT_NAME_DESC
-	EN	The name that will appear in your Spotify app for this device. Leave empty to use the player name.
-
