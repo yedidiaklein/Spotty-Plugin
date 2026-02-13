@@ -15,6 +15,7 @@ use Slim::Utils::Timers;
 
 use Plugins::Spotty::AccountHelper;
 use Plugins::Spotty::API;
+use Plugins::Spotty::Connect;
 use Plugins::Spotty::Helper;
 use Plugins::Spotty::OPML;
 use Plugins::Spotty::ProtocolHandler;
@@ -74,6 +75,7 @@ sub initPlugin {
 		sortAlbumsAlphabetically => 1,
 		sortArtistsAlphabetically => 1,
 		sortPlaylisttracksByAddition => 0,
+		enableSpotifyConnect => 0,
 	});
 
 	$prefs->setValidate({ 'validator' => sub { $_[1] =~ /^[a-f0-9]{32}$/i } }, 'iconCode');
@@ -114,6 +116,9 @@ sub initPlugin {
 	});
 
 	Plugins::Spotty::Helper->init();
+	
+	# Initialize Spotify Connect
+	Plugins::Spotty::Connect->init();
 
 	$VERSION = $class->_pluginDataFor('version');
 	Slim::Player::ProtocolHandlers->registerHandler('spotify', 'Plugins::Spotty::ProtocolHandler');
@@ -362,6 +367,7 @@ sub killHangingProcesses {
 
 # we only run when transcoding is enabled, but shutdown would be called no matter what
 sub shutdownPlugin { if (main::TRANSCODING) {
+	Plugins::Spotty::Connect->shutdown();
 	Plugins::Spotty::AccountHelper->purgeAudioCache(1);
 	__PACKAGE__->killHangingProcesses(1);
 } }

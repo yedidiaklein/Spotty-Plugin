@@ -1184,3 +1184,27 @@ PLUGIN_SPOTTY_PLAYLIST_TRACKS
 	HU	Lejátszási lista zeneszámok
 	NL	Afspeellijst Nummers
 
+
+PLUGIN_SPOTTY_ENABLE_CONNECT
+ENEnable Spotify Connect
+
+PLUGIN_SPOTTY_ENABLE_CONNECT_DESC
+ENEnable Spotify Connect to make your players appear as available devices in the Spotify mobile app. You can then control playback directly from the Spotify app on your phone, tablet, or computer.
+
+PLUGIN_SPOTTY_ENABLE_CONNECT_PLAYER
+ENEnable Spotify Connect for this player
+
+PLUGIN_SPOTTY_ENABLE_CONNECT_PLAYER_DESC
+ENEnable Spotify Connect for this specific player. The global Spotify Connect setting must also be enabled in the main Spotty settings.
+
+PLUGIN_SPOTTY_CONNECT_NAME
+ENSpotify Connect device name
+
+PLUGIN_SPOTTY_CONNECT_NAME_DESC
+ENThe name that will appear in your Spotify app for this device. Leave empty to use the player name.
+
+PLUGIN_SPOTTY_SPOTIFY_CONNECT
+ENSpotify Connect
+
+PLUGIN_SPOTTY_SPOTIFY_CONNECT_DESC_LONG
+EN<b>About Spotify Connect:</b> Spotify Connect allows your Squeezebox players to appear as available devices in the Spotify mobile app. Once enabled, you can select your player from the "Available devices" menu in the Spotify app and control playback directly from your phone or computer. This uses the modern Spotify Connect protocol through librespot. <b>Network Requirements:</b> For Spotify Connect to work, your firewall must allow mDNS/Zeroconf traffic on UDP port 5353 and Spotify streaming on TCP ports 80, 443, and 4070.
