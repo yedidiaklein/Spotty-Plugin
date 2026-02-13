@@ -28,7 +28,10 @@ Spotty now supports Spotify Connect, allowing your Squeezebox to appear as a spe
 5. Optionally, customize the "Spotify Connect device name" that appears in your Spotify app
 
 **Important notes:**
-- For Spotify Connect to work, your firewall must allow mDNS/Zeroconf traffic (UDP port 5353)
+- For Spotify Connect to work, your firewall must allow:
+  - mDNS/Zeroconf traffic (UDP port 5353)
+  - Spotify streaming ports (TCP ports 80, 443, 4070)
+  - The spotty helper needs network access on these ports
 - The device will appear in your Spotify app's "Available devices" list
 - You can control playback, volume, and track selection directly from the Spotify app
 - Both local LMS playback and Spotify Connect playback can be used simultaneously on different players

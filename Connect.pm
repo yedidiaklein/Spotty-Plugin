@@ -74,6 +74,12 @@ sub startConnect {
 	my $cacheDir = Plugins::Spotty::AccountHelper->cacheFolder($account);
 	my $name = $prefs->client($client)->get('connectName') || $client->name() || 'Squeezebox';
 	
+	# Sanitize the device name to remove special characters that might cause issues
+	$name =~ s/[^\w\s\-\.]/ /g;  # Replace special chars with space
+	$name =~ s/\s+/ /g;           # Collapse multiple spaces
+	$name =~ s/^\s+|\s+$//g;      # Trim leading/trailing spaces
+	$name ||= 'Squeezebox';       # Fallback if name becomes empty
+	
 	# Build command - run in discovery mode, output to stdout
 	my @cmd = (
 		$helper,
@@ -119,12 +125,14 @@ sub startConnect {
 		} @cmd);
 		
 		# Use START /B to run in background without creating a new window
-		system(qq{START /B "" $quotedCmd >NUL 2>&1});
+		# Use a descriptive title to avoid issues with empty quotes
+		system(qq{START /B "Spotty Connect - $name" $quotedCmd >NUL 2>&1});
 		
-		# Get the PID - on Windows this is tricky, we'll use a heuristic
-		# Find the most recent spotty.exe process
-		my $output = `tasklist /FI "IMAGENAME eq spotty.exe" /FO CSV /NH 2>NUL`;
-		if ($output =~ /"spotty\.exe","(\d+)"/) {
+		# Get the PID - on Windows this is tricky
+		# We look for the most recent spotty.exe process with our device name in the command line
+		sleep 1; # Give the process time to start
+		my $output = `wmic process where "name='spotty.exe' and commandline like '%$name%'" get processid 2>NUL`;
+		if ($output =~ /(\d+)\s*$/) {
 			$pid = $1;
 		}
 		
@@ -224,8 +232,8 @@ sub monitorProcesses {
 				my $running = 0;
 				
 				if (main::ISWINDOWS) {
-					# On Windows, check if process exists
-					my $output = `tasklist /FI "PID eq $pid" /FO CSV /NH 2>NUL`;
+					# On Windows, check if process exists with exact PID and verify it's still a spotty process
+					my $output = `wmic process where "processid=$pid and name='spotty.exe'" get name 2>NUL`;
 					$running = ($output =~ /spotty\.exe/i);
 				}
 				else {
@@ -239,9 +247,12 @@ sub monitorProcesses {
 					$log->warn("Spotify Connect process died for " . $client->name() . ", restarting...");
 					delete $connectProcesses{$clientId};
 					
-					# Restart after delay
+					# Restart after delay - check if client is still valid
 					Slim::Utils::Timers::setTimer($class, time() + RESTART_DELAY, sub {
-						$class->startConnect($client);
+						# Verify the client object is still valid before restarting
+						if ($client && ref $client && $client->can('id')) {
+							$class->startConnect($client);
+						}
 					});
 				}
 			} else {
@@ -275,7 +286,8 @@ sub isRunning {
 	my $pid = $processInfo->{pid};
 	
 	if (main::ISWINDOWS) {
-		my $output = `tasklist /FI "PID eq $pid" /FO CSV /NH 2>NUL`;
+		# On Windows, verify the process still exists and is a spotty.exe before checking
+		my $output = `wmic process where "processid=$pid and name='spotty.exe'" get name 2>NUL`;
 		return ($output =~ /spotty\.exe/i) ? 1 : 0;
 	}
 	else {
