@@ -44,7 +44,7 @@ sub page {
 }
 
 sub prefs {
-	my @prefs = qw(myAlbumsOnly cleanupTags bitrate iconCode accountSwitcherMenu helper sortAlbumsAlphabetically sortArtistsAlphabetically sortPlaylisttracksByAddition);
+	my @prefs = qw(myAlbumsOnly cleanupTags bitrate iconCode accountSwitcherMenu helper sortAlbumsAlphabetically sortArtistsAlphabetically sortPlaylisttracksByAddition enableSpotifyConnect);
 	push @prefs, 'sortSongsAlphabetically' if !Plugins::Spotty::Plugin->hasDefaultIcon();
 	push @prefs, 'forceFallbackAP' if !Plugins::Spotty::Helper->getCapability('no-ap-port');
 	return ($prefs, @prefs);

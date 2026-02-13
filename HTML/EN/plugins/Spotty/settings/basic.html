@@ -130,6 +130,11 @@
 		<input name="pref_iconCode" id="pref_iconCode" type="text" value="[% IF !hasDefaultIcon; prefs.pref_iconCode; END %]" class="stdedit" size="40">
 	[% END %]
 
+	[% WRAPPER setting title="PLUGIN_SPOTTY_ENABLE_CONNECT" desc="PLUGIN_SPOTTY_ENABLE_CONNECT_DESC" %]
+		<input name="pref_enableSpotifyConnect" id="pref_enableSpotifyConnect" type="checkbox" [% IF prefs.pref_enableSpotifyConnect %] checked [% END %]>
+		<label for="pref_enableSpotifyConnect">[% "PLUGIN_SPOTTY_ENABLE_CONNECT" | string %]</label>
+	[% END %]
+
 	[% WRAPPER setting title="PLUGIN_SPOTTY_SPOTIFY_CONNECT" desc="" %]
 		[% "PLUGIN_SPOTTY_SPOTIFY_CONNECT_DESC_LONG" | string %]
 	[% END %]
