@@ -75,7 +75,8 @@ sub startConnect {
 	my $name = $prefs->client($client)->get('connectName') || $client->name() || 'Squeezebox';
 	
 	# Sanitize the device name - only allow alphanumeric, spaces, hyphens
-	$name =~ s/[^\w\s\-]//g;     # Remove special chars except space and hyphen
+	# Explicitly exclude underscore to prevent potential command injection
+	$name =~ s/[^a-zA-Z0-9\s\-]//g;     # Remove special chars except space and hyphen
 	$name =~ s/\s+/ /g;           # Collapse multiple spaces
 	$name =~ s/^\s+|\s+$//g;      # Trim leading/trailing spaces
 	$name ||= 'Squeezebox';       # Fallback if name becomes empty
@@ -89,7 +90,7 @@ sub startConnect {
 		'--device-type', 'speaker',
 	);
 	
-	# Add bitrate if supported
+	# Add bitrate if supported (third parameter 10 is version comparison precision)
 	if (Slim::Utils::Versions->checkVersion($helperVersion, '0.8.0', 10)) {
 		push @cmd, '--bitrate', $prefs->get('bitrate') || 320;
 	}
@@ -132,6 +133,7 @@ sub startConnect {
 		sleep 1;
 		
 		# Get all spotty.exe processes and find the newest one
+		# WMIC date format is YYYYMMDDHHmmss.microseconds+timezone
 		# This is a heuristic - not perfect but better than nothing
 		my $output = `wmic process where "name='spotty.exe'" get processid,creationdate 2>NUL`;
 		my @pids;
@@ -256,11 +258,12 @@ sub monitorProcesses {
 					$log->warn("Spotify Connect process died for " . $client->name() . ", restarting...");
 					delete $connectProcesses{$clientId};
 					
-					# Restart after delay - check if client is still valid
+					# Restart after delay - look up client from active list to avoid stale references
 					Slim::Utils::Timers::setTimer($class, time() + RESTART_DELAY, sub {
-						# Verify the client object is still valid before restarting
-						if ($client && ref $client && $client->can('id')) {
-							$class->startConnect($client);
+						# Look up client by ID from active clients to ensure it's still valid
+						my $activeClient = Slim::Player::Client::getClient($clientId);
+						if ($activeClient) {
+							$class->startConnect($activeClient);
 						}
 					});
 				}
