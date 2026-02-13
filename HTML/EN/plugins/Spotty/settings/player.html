@@ -31,4 +31,13 @@
 		</select>
 	[% END %]
 
+	[% WRAPPER setting title="PLUGIN_SPOTTY_ENABLE_CONNECT_PLAYER" desc="PLUGIN_SPOTTY_ENABLE_CONNECT_PLAYER_DESC" %]
+		<input name="pref_enableConnect" id="pref_enableConnect" type="checkbox" [% IF prefs.pref_enableConnect %] checked [% END %]>
+		<label for="pref_enableConnect">[% "PLUGIN_SPOTTY_ENABLE_CONNECT_PLAYER" | string %]</label>
+	[% END %]
+
+	[% WRAPPER setting title="PLUGIN_SPOTTY_CONNECT_NAME" desc="PLUGIN_SPOTTY_CONNECT_NAME_DESC" %]
+		<input name="pref_connectName" id="pref_connectName" type="text" value="[% prefs.pref_connectName %]" class="stdedit" size="40">
+	[% END %]
+
 [% PROCESS settings/footer.html %]
