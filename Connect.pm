@@ -3,7 +3,6 @@ package Plugins::Spotty::Connect;
 use strict;
 
 use File::Spec::Functions qw(catdir catfile);
-use POSIX qw(:sys_wait_h);
 
 use Slim::Utils::Log;
 use Slim::Utils::Prefs;
@@ -11,6 +10,14 @@ use Slim::Utils::Timers;
 
 use Plugins::Spotty::AccountHelper;
 use Plugins::Spotty::Helper;
+
+# Platform-specific imports
+BEGIN {
+	if (!main::ISWINDOWS) {
+		require POSIX;
+		POSIX->import(qw(:sys_wait_h));
+	}
+}
 
 my $prefs = preferences('plugin.spotty');
 my $serverPrefs = preferences('server');
@@ -101,24 +108,51 @@ sub startConnect {
 	my $cmdString = join(' ', map { /\s/ ? qq{"$_"} : $_ } @cmd);
 	main::INFOLOG && $log->is_info && $log->info("Starting Spotify Connect for " . $client->name() . ": $cmdString");
 	
-	# Fork and exec the process
-	my $pid = fork();
+	my $pid;
 	
-	if (!defined $pid) {
-		$log->error("Failed to fork Spotify Connect process: $!");
-		return;
-	}
-	
-	if ($pid == 0) {
-		# Child process
-		# Redirect stdout/stderr to /dev/null or log file
-		if (!main::DEBUGLOG || !$log->is_debug) {
-			open(STDOUT, '>', '/dev/null');
-			open(STDERR, '>', '/dev/null');
+	if (main::ISWINDOWS) {
+		# On Windows, use system with START to run in background
+		my $quotedCmd = join(' ', map { 
+			my $arg = $_;
+			$arg =~ s/"/\\"/g;  # Escape quotes
+			/\s/ ? qq{"$arg"} : $arg 
+		} @cmd);
+		
+		# Use START /B to run in background without creating a new window
+		system(qq{START /B "" $quotedCmd >NUL 2>&1});
+		
+		# Get the PID - on Windows this is tricky, we'll use a heuristic
+		# Find the most recent spotty.exe process
+		my $output = `tasklist /FI "IMAGENAME eq spotty.exe" /FO CSV /NH 2>NUL`;
+		if ($output =~ /"spotty\.exe","(\d+)"/) {
+			$pid = $1;
 		}
 		
-		# Execute spotty
-		exec(@cmd) or exit(1);
+		if (!$pid) {
+			$log->error("Failed to start Spotify Connect on Windows");
+			return;
+		}
+	}
+	else {
+		# On Unix, fork and exec the process
+		$pid = fork();
+		
+		if (!defined $pid) {
+			$log->error("Failed to fork Spotify Connect process: $!");
+			return;
+		}
+		
+		if ($pid == 0) {
+			# Child process
+			# Redirect stdout/stderr to /dev/null unless debugging
+			if (!main::DEBUGLOG || !$log->is_debug) {
+				open(STDOUT, '>', '/dev/null');
+				open(STDERR, '>', '/dev/null');
+			}
+			
+			# Execute spotty
+			exec(@cmd) or exit(1);
+		}
 	}
 	
 	# Parent process
@@ -145,19 +179,25 @@ sub stopConnect {
 	
 	main::INFOLOG && $log->is_info && $log->info("Stopping Spotify Connect for " . $client->name() . " (PID: $pid)");
 	
-	# Try graceful shutdown first
-	if (kill 'TERM', $pid) {
-		# Wait a bit for process to exit
-		for (my $i = 0; $i < 10; $i++) {
-			my $result = waitpid($pid, WNOHANG);
-			last if $result == $pid || $result == -1;
-			select(undef, undef, undef, 0.1);
-		}
-		
-		# Force kill if still running
-		if (kill 0, $pid) {
-			kill 'KILL', $pid;
-			waitpid($pid, 0);
+	if (main::ISWINDOWS) {
+		# On Windows, use taskkill
+		system(qq{taskkill /PID $pid /F >NUL 2>&1});
+	}
+	else {
+		# Try graceful shutdown first on Unix
+		if (kill 'TERM', $pid) {
+			# Wait a bit for process to exit
+			for (my $i = 0; $i < 10; $i++) {
+				my $result = POSIX::waitpid($pid, POSIX::WNOHANG);
+				last if $result == $pid || $result == -1;
+				select(undef, undef, undef, 0.1);
+			}
+			
+			# Force kill if still running
+			if (kill 0, $pid) {
+				kill 'KILL', $pid;
+				POSIX::waitpid($pid, 0);
+			}
 		}
 	}
 	
@@ -181,9 +221,20 @@ sub monitorProcesses {
 			# Check if process is running
 			if ($processInfo && $processInfo->{pid}) {
 				my $pid = $processInfo->{pid};
-				my $result = waitpid($pid, WNOHANG);
+				my $running = 0;
 				
-				if ($result == $pid || $result == -1 || !kill(0, $pid)) {
+				if (main::ISWINDOWS) {
+					# On Windows, check if process exists
+					my $output = `tasklist /FI "PID eq $pid" /FO CSV /NH 2>NUL`;
+					$running = ($output =~ /spotty\.exe/i);
+				}
+				else {
+					# On Unix, use waitpid with WNOHANG
+					my $result = POSIX::waitpid($pid, POSIX::WNOHANG);
+					$running = ($result == 0 && kill(0, $pid));
+				}
+				
+				if (!$running) {
 					# Process died
 					$log->warn("Spotify Connect process died for " . $client->name() . ", restarting...");
 					delete $connectProcesses{$clientId};
@@ -221,7 +272,15 @@ sub isRunning {
 	
 	return 0 unless $processInfo && $processInfo->{pid};
 	
-	return kill 0, $processInfo->{pid};
+	my $pid = $processInfo->{pid};
+	
+	if (main::ISWINDOWS) {
+		my $output = `tasklist /FI "PID eq $pid" /FO CSV /NH 2>NUL`;
+		return ($output =~ /spotty\.exe/i) ? 1 : 0;
+	}
+	else {
+		return kill 0, $pid;
+	}
 }
 
 1;
