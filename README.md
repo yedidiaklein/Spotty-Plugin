@@ -14,6 +14,25 @@ Most aspects of the Spotty configuration can be configured in LMS directly, in S
 
 IMPORTANT: on some systems you might need to tweak a firewall, or configure your container to make things work. Please make sure you allow Spotty, and in particular its helper application which you can find in its `Bin` folder, to reach the internet on ports `80`, `443`, and `4070`!
 
+Spotify Connect Support
+---
+
+Spotty now supports Spotify Connect, allowing your Squeezebox to appear as a speaker in the Spotify mobile app. This means you can control playback directly from your phone or computer's Spotify app.
+
+**To enable Spotify Connect:**
+
+1. Go to Settings → Advanced → Spotty
+2. Enable the "Enable Spotify Connect" option
+3. Go to Settings → Player → Spotty (for each player you want to use)
+4. Enable "Enable Spotify Connect for this player"
+5. Optionally, customize the "Spotify Connect device name" that appears in your Spotify app
+
+**Important notes:**
+- For Spotify Connect to work, your firewall must allow mDNS/Zeroconf traffic (UDP port 5353)
+- The device will appear in your Spotify app's "Available devices" list
+- You can control playback, volume, and track selection directly from the Spotify app
+- Both local LMS playback and Spotify Connect playback can be used simultaneously on different players
+
 Disclaimer
 ---
 
