@@ -74,8 +74,8 @@ sub startConnect {
 	my $cacheDir = Plugins::Spotty::AccountHelper->cacheFolder($account);
 	my $name = $prefs->client($client)->get('connectName') || $client->name() || 'Squeezebox';
 	
-	# Sanitize the device name to remove special characters that might cause issues
-	$name =~ s/[^\w\s\-\.]/ /g;  # Replace special chars with space
+	# Sanitize the device name - only allow alphanumeric, spaces, hyphens
+	$name =~ s/[^\w\s\-]//g;     # Remove special chars except space and hyphen
 	$name =~ s/\s+/ /g;           # Collapse multiple spaces
 	$name =~ s/^\s+|\s+$//g;      # Trim leading/trailing spaces
 	$name ||= 'Squeezebox';       # Fallback if name becomes empty
@@ -128,12 +128,22 @@ sub startConnect {
 		# Use a descriptive title to avoid issues with empty quotes
 		system(qq{START /B "Spotty Connect - $name" $quotedCmd >NUL 2>&1});
 		
-		# Get the PID - on Windows this is tricky
-		# We look for the most recent spotty.exe process with our device name in the command line
-		sleep 1; # Give the process time to start
-		my $output = `wmic process where "name='spotty.exe' and commandline like '%$name%'" get processid 2>NUL`;
-		if ($output =~ /(\d+)\s*$/) {
-			$pid = $1;
+		# Wait for process to start and find the most recent spotty.exe
+		sleep 1;
+		
+		# Get all spotty.exe processes and find the newest one
+		# This is a heuristic - not perfect but better than nothing
+		my $output = `wmic process where "name='spotty.exe'" get processid,creationdate 2>NUL`;
+		my @pids;
+		while ($output =~ /(\d{14})\.\d+\+\d+\s+(\d+)/g) {
+			my ($date, $foundPid) = ($1, $2);
+			push @pids, { pid => $foundPid, date => $date };
+		}
+		
+		if (@pids) {
+			# Sort by creation date (newest first) and take the first one
+			@pids = sort { $b->{date} cmp $a->{date} } @pids;
+			$pid = $pids[0]->{pid};
 		}
 		
 		if (!$pid) {
@@ -232,9 +242,8 @@ sub monitorProcesses {
 				my $running = 0;
 				
 				if (main::ISWINDOWS) {
-					# On Windows, check if process exists with exact PID and verify it's still a spotty process
-					my $output = `wmic process where "processid=$pid and name='spotty.exe'" get name 2>NUL`;
-					$running = ($output =~ /spotty\.exe/i);
+					# On Windows, check if process exists
+					$running = $class->_isWindowsProcessRunning($pid);
 				}
 				else {
 					# On Unix, use waitpid with WNOHANG
@@ -286,13 +295,23 @@ sub isRunning {
 	my $pid = $processInfo->{pid};
 	
 	if (main::ISWINDOWS) {
-		# On Windows, verify the process still exists and is a spotty.exe before checking
-		my $output = `wmic process where "processid=$pid and name='spotty.exe'" get name 2>NUL`;
-		return ($output =~ /spotty\.exe/i) ? 1 : 0;
+		# On Windows, verify the process still exists
+		return $class->_isWindowsProcessRunning($pid);
 	}
 	else {
 		return kill 0, $pid;
 	}
+}
+
+# Helper function to check if a Windows process exists
+sub _isWindowsProcessRunning {
+	my ($class, $pid) = @_;
+	
+	return 0 unless $pid;
+	
+	# Use wmic to verify the process exists and is a spotty.exe
+	my $output = `wmic process where "processid=$pid and name='spotty.exe'" get name 2>NUL`;
+	return ($output =~ /spotty\.exe/i) ? 1 : 0;
 }
 
 1;
